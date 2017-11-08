@@ -1,0 +1,114 @@
+package main
+
+import (
+	"crypto/tls"
+	"crypto/x509"
+
+	"github.com/elazarl/goproxy"
+)
+
+//custom key
+var caCert = []byte(`-----BEGIN CERTIFICATE-----
+MIIFeTCCA2GgAwIBAgIJAOFfXUbMh+9VMA0GCSqGSIb3DQEBBQUAMDExCzAJBgNV
+BAYTAkRFMRAwDgYDVQQKEwdHb3Byb3h5MRAwDgYDVQQDEwdHb3Byb3h5MB4XDTE3
+MDEyNzAyNDQyMFoXDTE4MDEyNzAyNDQyMFowMTELMAkGA1UEBhMCREUxEDAOBgNV
+BAoTB0dvcHJveHkxEDAOBgNVBAMTB0dvcHJveHkwggIiMA0GCSqGSIb3DQEBAQUA
+A4ICDwAwggIKAoICAQCbMXzYUExdh6ICpUvo56P6atAxIXQ8y0VyS2PK27yQ6OUU
+K9+yRzZJshOYRHAYdYSczhKrvj1M60rshXiAL5XZf/xNUr6VP5DlCBU5lZiDiiS5
+xPSsCZIsF4CzrLvY5/DF47ljKP6jEEKW/P1lp1Z0rbuwGCTKqogdE9ckPJVCS48S
+ewIGin41YdBYiumfpdiRu/yCYLzQAQvtG80s56/3hyXASB/xsDx+ElVjHKplwMMq
+M3dyuB2yfBXd3HLrTvsxgmDlBtELmxkwld1/M5A41p0FfqpRNScbYsdB56UD0uKt
+wwHoXjIDYs91o1FthgwK5AL+U7NwP+SB06rcgVr+iCRtawNDFr3riIGjqbnlF3HW
+1fmYswgBliU1fNr5uZhv3PIlYOQ5qdNdxIRGltiFoKxw2tbZy9aDq6WrAKSyboHm
+fAn7WecbMyOfq1H98udAlOazU6DuGBhiUUkUKbqepXthjp7ZE/j+g/PosJj41VHc
+t6AUHCPPi2nxbXBpzvfFmTrvOJ66u0vHhZ1a1tsnU/4s8iHvqe7fR+Bs2EUIrNqg
+qPAz5cLD7YOTWyIZJSOYHs4Lpwnw3vir8/YDSQv3KVZ/HRZl/jdogwtpavJhgMYf
+jd6kQcF/EFQfb7qRBA7vAdgurdQh1ah1V7uDws6OVL0t0K76S+kmJeXqH5D2cQID
+AQABo4GTMIGQMB0GA1UdDgQWBBQkTXbgI9wskkocHhqwj+27Ts6jfjBhBgNVHSME
+WjBYgBQkTXbgI9wskkocHhqwj+27Ts6jfqE1pDMwMTELMAkGA1UEBhMCREUxEDAO
+BgNVBAoTB0dvcHJveHkxEDAOBgNVBAMTB0dvcHJveHmCCQDhX11GzIfvVTAMBgNV
+HRMEBTADAQH/MA0GCSqGSIb3DQEBBQUAA4ICAQA1z3iERpAdAaamU9gt3M/BSPl/
+tenbH+ExwFgUjPQYDYagRjw/n4QIPp4x1eE8F/Q5Sib0Jl+Y4tlkDoUj//UtBdBH
+BXM+K/z8gqCzLF4UnpgePjtLzM9Uv/F/GEVp9zu4pc3q9Sp+U0CRtmab+16gHgQB
+auxebEH5UkvzZ7JzHmKhAYhlO8izWUUbEMGRxU0uO85Ny6BvFbEvlPLl3e/nWicR
+B7EDL+UfUXBA2UtUpci5JGXg86RgU0ojN8Af2tpLnmkEtetJ0wiLEWMFf5e7j1RF
+z0Rs0hoXV17ggefbEo8FyPNTglKrmBGxFRRyUjd8EZdtyq2kcYVNbpzv+39QEMY/
+Ra67sCwL8QDqanALSNnIrIsiWyDhTXfsIrMowfGsP977PV3V2z9osRqroMXkz0P5
+MxptGWuN5OsuYF1spB+2Oh4PGPALj6TQm/CLxSZTls8K3AJnbvXnNHAGKzyHOL6D
+3PrdnnW0hPBzt6k84ChWkSnudnY/IJmn3GdvAhUku6k7xQCfxOkSz6bZh4XK5ATT
+BkzQJ0sdrFb/BZJWuEa4cl986CBmEqs+gnRtsUyJ4C3fCOxHEdQp4A/avd9HCA16
+fBZSDbC+i1l1rH5GSiughGZ5hrXcMHDu18wj2XXI+NHFKTF6mCivlunYPL6XxKu8
+2dV0unm3FMCKRhCy7Q==
+-----END CERTIFICATE-----`)
+
+var caKey = []byte(`-----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: DES-EDE3-CBC,30D833FE5B9B2F6A
+
+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
+-----END RSA PRIVATE KEY-----`)
+
+// Lets the proxy to use user-provided certificate
+func setCA(caCert, caKey []byte) error {
+	goproxyCa, err := tls.X509KeyPair(caCert, caKey)
+	if err != nil {
+		return err
+	}
+	if goproxyCa.Leaf, err = x509.ParseCertificate(goproxyCa.Certificate[0]); err != nil {
+		return err
+	}
+	goproxy.GoproxyCa = goproxyCa
+	goproxy.OkConnect = &goproxy.ConnectAction{Action: goproxy.ConnectAccept, TLSConfig: goproxy.TLSConfigFromCA(&goproxyCa)}
+	goproxy.MitmConnect = &goproxy.ConnectAction{Action: goproxy.ConnectMitm, TLSConfig: goproxy.TLSConfigFromCA(&goproxyCa)}
+	goproxy.HTTPMitmConnect = &goproxy.ConnectAction{Action: goproxy.ConnectHTTPMitm, TLSConfig: goproxy.TLSConfigFromCA(&goproxyCa)}
+	goproxy.RejectConnect = &goproxy.ConnectAction{Action: goproxy.ConnectReject, TLSConfig: goproxy.TLSConfigFromCA(&goproxyCa)}
+	return nil
+}
